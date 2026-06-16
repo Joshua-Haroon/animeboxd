@@ -1,34 +1,958 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Download App</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AnimeBoxd – Your Personal Anime Diary</title>
+  <meta name="description" content="Track, rate, and discover anime with AnimeBoxd. Coming soon on the Google Play Store." />
+
   <style>
-    body {
-      background: #0b0b0b;
-      color: white;
-      font-family: sans-serif;
-      text-align: center;
-      padding-top: 100px;
+    /* ─── Reset & Base ──────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg-void:       #0b0c10;
+      --bg-surface:    #1f2833;
+      --bg-card:       #121216;
+      --text-primary:  #e8e9ea;
+      --text-muted:    #c5c6c7;
+      --text-dim:      #6b7280;
+      --accent:        #e8a045;
+      --accent-glow:   rgba(232, 160, 69, 0.18);
+      --accent-subtle: rgba(232, 160, 69, 0.07);
+      --border:        rgba(255, 255, 255, 0.07);
+      --font:          'Segoe UI', system-ui, -apple-system, sans-serif;
     }
-    button {
-      background: crimson;
-      color: white;
-      border: none;
-      padding: 15px 30px;
-      font-size: 18px;
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg-void);
+      color: var(--text-primary);
+      font-family: var(--font);
+      font-size: 16px;
+      line-height: 1.6;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ─── Film Grain Canvas ─────────────────────────── */
+    #grain {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.028;
+    }
+
+    /* ─── Layout Wrappers ───────────────────────────── */
+    .container {
+      width: 100%;
+      max-width: 880px;
+      margin: 0 auto;
+      padding: 0 24px;
+      position: relative;
+      z-index: 1;
+    }
+
+    section { position: relative; z-index: 1; }
+
+    /* ─── Navigation ────────────────────────────────── */
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      padding: 18px 0;
+      background: linear-gradient(180deg, rgba(11,12,16,0.95) 0%, transparent 100%);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+    }
+
+    nav .inner {
+      max-width: 880px;
+      margin: 0 auto;
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .nav-logo {
+      font-size: 1.15rem;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      color: var(--text-primary);
+      text-decoration: none;
+    }
+
+    .nav-logo span {
+      color: var(--accent);
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 28px;
+      list-style: none;
+    }
+
+    .nav-links a {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.875rem;
+      font-weight: 500;
+      letter-spacing: 0.01em;
+      transition: color 0.2s;
+    }
+
+    .nav-links a:hover { color: var(--text-primary); }
+
+    /* ─── Hero ──────────────────────────────────────── */
+    #hero {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 120px 0 80px;
+      position: relative;
+    }
+
+    /* Cinematic vignette behind hero content */
+    #hero::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 70% 60% at 50% 40%, rgba(232,160,69,0.05) 0%, transparent 70%),
+        radial-gradient(ellipse 100% 80% at 50% 100%, rgba(11,12,16,0.9) 0%, transparent 60%);
+      pointer-events: none;
+    }
+
+    /* Subtle horizontal scan lines */
+    #hero::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 3px,
+        rgba(0,0,0,0.03) 3px,
+        rgba(0,0,0,0.03) 4px
+      );
+      pointer-events: none;
+    }
+
+    .hero-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--accent-subtle);
+      border: 1px solid rgba(232,160,69,0.25);
+      border-radius: 100px;
+      padding: 6px 16px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 28px;
+    }
+
+    .hero-eyebrow .dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      animation: pulse-dot 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.75); }
+    }
+
+    .hero-title {
+      font-size: clamp(2.8rem, 7vw, 5rem);
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      line-height: 1.05;
+      color: var(--text-primary);
+      margin-bottom: 6px;
+    }
+
+    .hero-title .brand-accent {
+      color: var(--accent);
+      position: relative;
+      display: inline-block;
+    }
+
+    /* Underline flicker on brand name */
+    .hero-title .brand-accent::after {
+      content: '';
+      position: absolute;
+      bottom: 2px; left: 0; right: 0;
+      height: 3px;
+      background: var(--accent);
+      border-radius: 2px;
+      opacity: 0.4;
+    }
+
+    .hero-tagline {
+      font-size: clamp(0.95rem, 2vw, 1.1rem);
+      color: var(--text-muted);
+      max-width: 480px;
+      margin: 18px auto 40px;
+      font-weight: 400;
+      line-height: 1.7;
+    }
+
+    .hero-cta-group {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+
+    /* Play Store badge */
+    .badge-playstore {
+      display: inline-flex;
+      align-items: center;
+      gap: 14px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px 24px;
+      cursor: default;
+      position: relative;
+      overflow: hidden;
+      transition: border-color 0.3s;
+    }
+
+    .badge-playstore:hover {
+      border-color: rgba(232,160,69,0.3);
+    }
+
+    .badge-playstore::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, var(--accent-subtle) 0%, transparent 60%);
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    .badge-playstore:hover::before { opacity: 1; }
+
+    .badge-icon {
+      width: 36px; height: 36px;
+      flex-shrink: 0;
+    }
+
+    .badge-text {
+      text-align: left;
+    }
+
+    .badge-text .sub {
+      display: block;
+      font-size: 0.68rem;
+      color: var(--text-dim);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      font-weight: 500;
+    }
+
+    .badge-text .main {
+      display: block;
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      letter-spacing: -0.01em;
+      line-height: 1.2;
+    }
+
+    .soon-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(232,160,69,0.1);
+      border: 1px solid rgba(232,160,69,0.2);
+      color: var(--accent);
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 4px 12px;
+      border-radius: 100px;
+    }
+
+    /* ─── Scroll Indicator ──────────────────────────── */
+    .scroll-hint {
+      position: absolute;
+      bottom: 32px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      opacity: 0.35;
+    }
+
+    .scroll-hint span {
+      font-size: 0.7rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+
+    .scroll-arrow {
+      width: 20px; height: 20px;
+      border-right: 1.5px solid var(--text-muted);
+      border-bottom: 1.5px solid var(--text-muted);
+      transform: rotate(45deg);
+      animation: bounce-arrow 1.8s ease-in-out infinite;
+    }
+
+    @keyframes bounce-arrow {
+      0%, 100% { transform: rotate(45deg) translateY(0); }
+      50% { transform: rotate(45deg) translateY(5px); }
+    }
+
+    /* ─── Features Section ──────────────────────────── */
+    #features {
+      padding: 100px 0;
+    }
+
+    .section-label {
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 12px;
+    }
+
+    .section-heading {
+      font-size: clamp(1.6rem, 4vw, 2.2rem);
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      color: var(--text-primary);
+      margin-bottom: 14px;
+    }
+
+    .section-sub {
+      font-size: 0.95rem;
+      color: var(--text-muted);
+      max-width: 500px;
+      line-height: 1.7;
+      margin-bottom: 52px;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 16px;
+    }
+
+    .feature-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 28px 24px;
+      transition: border-color 0.25s, transform 0.25s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .feature-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent 0%, rgba(232,160,69,0.4) 50%, transparent 100%);
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    .feature-card:hover {
+      border-color: rgba(232,160,69,0.2);
+      transform: translateY(-2px);
+    }
+
+    .feature-card:hover::before { opacity: 1; }
+
+    .feature-icon {
+      width: 44px; height: 44px;
+      border-radius: 12px;
+      background: var(--accent-subtle);
+      border: 1px solid rgba(232,160,69,0.15);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 18px;
+      font-size: 1.3rem;
+    }
+
+    .feature-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 8px;
+      letter-spacing: -0.01em;
+    }
+
+    .feature-desc {
+      font-size: 0.875rem;
+      color: var(--text-muted);
+      line-height: 1.65;
+    }
+
+    /* ─── Coming Soon Banner ────────────────────────── */
+    #coming-soon {
+      padding: 80px 0;
+    }
+
+    .coming-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 56px 48px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .coming-card::before {
+      content: '';
+      position: absolute;
+      top: -60px; left: 50%;
+      transform: translateX(-50%);
+      width: 300px; height: 300px;
+      background: radial-gradient(circle, rgba(232,160,69,0.08) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .coming-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: linear-gradient(135deg, rgba(232,160,69,0.15) 0%, rgba(232,160,69,0.06) 100%);
+      border: 1px solid rgba(232,160,69,0.3);
+      color: var(--accent);
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 8px 18px;
+      border-radius: 100px;
+      margin-bottom: 24px;
+    }
+
+    .coming-title {
+      font-size: clamp(1.5rem, 4vw, 2rem);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      color: var(--text-primary);
+      margin-bottom: 14px;
+      line-height: 1.2;
+    }
+
+    .coming-desc {
+      font-size: 0.95rem;
+      color: var(--text-muted);
+      max-width: 420px;
+      margin: 0 auto 36px;
+      line-height: 1.7;
+    }
+
+    /* Notify form */
+    .notify-form {
+      display: flex;
+      gap: 10px;
+      max-width: 400px;
+      margin: 0 auto;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .notify-input {
+      flex: 1;
+      min-width: 200px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
       border-radius: 10px;
+      padding: 12px 16px;
+      font-family: var(--font);
+      font-size: 0.875rem;
+      color: var(--text-primary);
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .notify-input::placeholder { color: var(--text-dim); }
+    .notify-input:focus { border-color: rgba(232,160,69,0.4); }
+
+    .notify-btn {
+      background: var(--accent);
+      border: none;
+      border-radius: 10px;
+      padding: 12px 22px;
+      font-family: var(--font);
+      font-size: 0.875rem;
+      font-weight: 700;
+      color: #1a0e00;
       cursor: pointer;
+      transition: opacity 0.2s, transform 0.15s;
+      white-space: nowrap;
+    }
+
+    .notify-btn:hover { opacity: 0.88; transform: translateY(-1px); }
+    .notify-btn:active { transform: translateY(0); }
+
+    .notify-note {
+      margin-top: 12px;
+      font-size: 0.75rem;
+      color: var(--text-dim);
+    }
+
+    .success-msg {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      color: var(--accent);
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+
+    /* ─── Divider ────────────────────────────────────── */
+    .divider {
+      width: 100%;
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* ─── Legal Section ─────────────────────────────── */
+    #legal {
+      padding: 80px 0;
+    }
+
+    .legal-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .legal-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 32px 28px;
+      text-decoration: none;
+      color: inherit;
+      display: flex;
+      align-items: flex-start;
+      gap: 20px;
+      transition: border-color 0.25s, background 0.25s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .legal-card:hover {
+      border-color: rgba(232,160,69,0.25);
+      background: var(--bg-surface);
+    }
+
+    .legal-card-icon {
+      width: 48px; height: 48px;
+      border-radius: 14px;
+      background: var(--accent-subtle);
+      border: 1px solid rgba(232,160,69,0.12);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.4rem;
+      flex-shrink: 0;
+    }
+
+    .legal-card-body { flex: 1; }
+
+    .legal-card-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 6px;
+      letter-spacing: -0.01em;
+    }
+
+    .legal-card-desc {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+
+    .legal-card-arrow {
+      color: var(--accent);
+      opacity: 0;
+      transform: translateX(-6px);
+      transition: opacity 0.2s, transform 0.2s;
+      font-size: 1.1rem;
+      margin-top: 2px;
+    }
+
+    .legal-card:hover .legal-card-arrow {
+      opacity: 1;
+      transform: translateX(0);
+    }
+
+    /* ─── Footer ─────────────────────────────────────── */
+    footer {
+      padding: 40px 0 32px;
+      border-top: 1px solid var(--border);
+      position: relative;
+      z-index: 1;
+    }
+
+    .footer-inner {
+      max-width: 880px;
+      margin: 0 auto;
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .footer-logo {
+      font-size: 1rem;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      color: var(--text-muted);
+    }
+
+    .footer-logo span { color: var(--accent); }
+
+    .footer-copy {
+      font-size: 0.8rem;
+      color: var(--text-dim);
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 20px;
+    }
+
+    .footer-links a {
+      font-size: 0.8rem;
+      color: var(--text-dim);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+
+    .footer-links a:hover { color: var(--text-muted); }
+
+    /* ─── Responsive ─────────────────────────────────── */
+    @media (max-width: 600px) {
+      .nav-links { display: none; }
+
+      .legal-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .coming-card {
+        padding: 40px 24px;
+      }
+
+      .features-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* ─── Reduced Motion ─────────────────────────────── */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation: none !important; transition: none !important; }
     }
   </style>
 </head>
+
 <body>
 
-<h1>Download My Anime App</h1>
-<p>Latest version</p>
+  <!-- Film grain canvas -->
+  <canvas id="grain" aria-hidden="true"></canvas>
 
-<a href="app-debug.apk" download>
-  <button>Download APK</button>
-</a>
+  <!-- ── Navigation ── -->
+  <nav aria-label="Main navigation">
+    <div class="inner">
+      <a href="#" class="nav-logo">Anime<span>Boxd</span></a>
+      <ul class="nav-links">
+        <li><a href="#features">Features</a></li>
+        <li><a href="#coming-soon">Release</a></li>
+        <li><a href="#legal">Legal</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- ── Hero ── -->
+  <section id="hero" aria-labelledby="hero-title">
+    <div class="container">
+      <div class="hero-eyebrow">
+        <span class="dot" aria-hidden="true"></span>
+        Coming to Android
+      </div>
+
+      <h1 class="hero-title" id="hero-title">
+        Your Anime,<br>
+        Perfectly <span class="brand-accent">Boxd</span>.
+      </h1>
+
+      <p class="hero-tagline">
+        Track every series. Rate every arc. Discover what to watch next.
+        AnimeBoxd is the anime diary built for real fans.
+      </p>
+
+      <div class="hero-cta-group">
+        <div class="badge-playstore" role="img" aria-label="Coming soon on Google Play">
+          <!-- Google Play triangle icon, hand-drawn SVG -->
+          <svg class="badge-icon" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <rect width="36" height="36" rx="8" fill="#1f2833"/>
+            <path d="M9 8.5L27 18L9 27.5V8.5Z" fill="#01875f"/>
+            <path d="M9 8.5L18.5 18L9 27.5L9 8.5Z" fill="#00c16a" opacity="0.7"/>
+            <path d="M9 8.5L27 18L20 21.5L9 27.5V8.5Z" fill="none"/>
+            <!-- Multicolour play triangle -->
+            <path d="M10 10L26 18L10 26V10Z" fill="url(#pg)"/>
+            <defs>
+              <linearGradient id="pg" x1="10" y1="10" x2="26" y2="26" gradientUnits="userSpaceOnUse">
+                <stop stop-color="#00d2ff"/>
+                <stop offset="0.4" stop-color="#01875f"/>
+                <stop offset="0.7" stop-color="#ffbb00"/>
+                <stop offset="1" stop-color="#ff4040"/>
+              </linearGradient>
+            </defs>
+          </svg>
+          <div class="badge-text">
+            <span class="sub">Get it on</span>
+            <span class="main">Google Play</span>
+          </div>
+        </div>
+        <span class="soon-tag" aria-label="Coming soon">
+          ⏳ Launching Soon
+        </span>
+      </div>
+    </div>
+
+    <div class="scroll-hint" aria-hidden="true">
+      <span>Scroll</span>
+      <div class="scroll-arrow"></div>
+    </div>
+  </section>
+
+  <!-- ── Features ── -->
+  <section id="features" aria-labelledby="features-heading">
+    <div class="container">
+      <p class="section-label">What's Inside</p>
+      <h2 class="section-heading" id="features-heading">Built for every kind of fan.</h2>
+      <p class="section-sub">
+        Whether you watch two episodes a year or two a night, AnimeBoxd gives you the tools to own your anime journey.
+      </p>
+
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon" aria-hidden="true">📺</div>
+          <h3 class="feature-title">Track Everything</h3>
+          <p class="feature-desc">Log series, mark episodes, and keep a complete history of every anime you've watched — or plan to.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon" aria-hidden="true">⭐</div>
+          <h3 class="feature-title">Rate & Review</h3>
+          <p class="feature-desc">Give every show a score that actually means something. Your ratings, your taste — no algorithm overwriting it.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon" aria-hidden="true">🔍</div>
+          <h3 class="feature-title">Discover Next</h3>
+          <p class="feature-desc">Find your next obsession with smart recommendations based on what you've already loved.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon" aria-hidden="true">🗂️</div>
+          <h3 class="feature-title">Custom Lists</h3>
+          <p class="feature-desc">Build themed lists — best isekai, hidden gems, shounen GOATs. Curate your own niche corner of anime.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon" aria-hidden="true">📊</div>
+          <h3 class="feature-title">Watch Stats</h3>
+          <p class="feature-desc">See your hours watched, genre breakdown, and annual wrap-ups. Bragging rights, visualised.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon" aria-hidden="true">🌑</div>
+          <h3 class="feature-title">Dark First</h3>
+          <p class="feature-desc">Designed from the ground up for late-night watches. The interface disappears so the anime doesn't.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Coming Soon ── -->
+  <section id="coming-soon" aria-labelledby="soon-heading">
+    <div class="container">
+      <div class="coming-card">
+        <div class="coming-badge">🚀 Play Store Launch</div>
+        <h2 class="coming-title" id="soon-heading">AnimeBoxd is on its way to Android.</h2>
+        <p class="coming-desc">
+          We're putting the finishing credits on the app. Drop your email and you'll be the first to know the moment it hits the Play Store.
+        </p>
+
+        <form class="notify-form" id="notifyForm" aria-label="Notify me when app launches">
+          <input
+            class="notify-input"
+            type="email"
+            id="emailInput"
+            placeholder="your@email.com"
+            autocomplete="email"
+            aria-label="Email address"
+            required
+          />
+          <button class="notify-btn" type="submit">Notify Me</button>
+        </form>
+
+        <div class="success-msg" id="successMsg" role="status" aria-live="polite">
+          ✅ You're on the list! We'll be in touch.
+        </div>
+
+        <p class="notify-note">No spam. Just one email when we launch.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Legal ── -->
+  <section id="legal" aria-labelledby="legal-heading">
+    <div class="container">
+      <div class="divider" style="margin-bottom: 80px;"></div>
+
+      <p class="section-label">Legal</p>
+      <h2 class="section-heading" id="legal-heading">Transparency, on paper.</h2>
+      <p class="section-sub" style="margin-bottom: 36px;">
+        Read how we handle your data and what you agree to when using AnimeBoxd.
+      </p>
+
+      <div class="legal-grid">
+        <a href="pp.html" class="legal-card" aria-label="Read our Privacy Policy">
+          <div class="legal-card-icon" aria-hidden="true">🔒</div>
+          <div class="legal-card-body">
+            <h3 class="legal-card-title">Privacy Policy</h3>
+            <p class="legal-card-desc">How we collect, use, and protect your personal information. Your data stays yours.</p>
+          </div>
+          <span class="legal-card-arrow" aria-hidden="true">→</span>
+        </a>
+
+        <a href="t&c.html" class="legal-card" aria-label="Read our Terms and Conditions">
+          <div class="legal-card-icon" aria-hidden="true">📋</div>
+          <div class="legal-card-body">
+            <h3 class="legal-card-title">Terms & Conditions</h3>
+            <p class="legal-card-desc">The rules of the road for using AnimeBoxd — what's okay, what isn't, and why.</p>
+          </div>
+          <span class="legal-card-arrow" aria-hidden="true">→</span>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Footer ── -->
+  <footer>
+    <div class="footer-inner">
+      <span class="footer-logo">Anime<span>Boxd</span></span>
+      <p class="footer-copy">© <span id="year"></span> AnimeBoxd. All rights reserved.</p>
+      <nav class="footer-links" aria-label="Footer navigation">
+        <a href="pp.html">Privacy</a>
+        <a href="t&c.html">Terms</a>
+      </nav>
+    </div>
+  </footer>
+
+  <!-- ── Scripts ── -->
+  <script>
+    /* ── Dynamic Year ── */
+    document.getElementById('year').textContent = new Date().getFullYear();
+
+    /* ── Film Grain ── */
+    (function () {
+      const canvas = document.getElementById('grain');
+      const ctx = canvas.getContext('2d');
+      let frame = 0;
+
+      function resize() {
+        canvas.width  = window.innerWidth;
+        canvas.height = window.innerHeight;
+      }
+
+      function renderGrain() {
+        const { width, height } = canvas;
+        const img = ctx.createImageData(width, height);
+        const data = img.data;
+
+        for (let i = 0; i < data.length; i += 4) {
+          const v = Math.random() * 255 | 0;
+          data[i] = data[i+1] = data[i+2] = v;
+          data[i+3] = 255;
+        }
+
+        ctx.putImageData(img, 0, 0);
+        frame++;
+        if (frame % 3 === 0) requestAnimationFrame(renderGrain); // 20fps grain
+        else requestAnimationFrame(renderGrain);
+      }
+
+      resize();
+      renderGrain();
+      window.addEventListener('resize', resize);
+    })();
+
+    /* ── Notify Form ── */
+    const form      = document.getElementById('notifyForm');
+    const successMsg = document.getElementById('successMsg');
+
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      const email = document.getElementById('emailInput').value.trim();
+      if (!email) return;
+
+      // Hide form, show success
+      form.style.display = 'none';
+      successMsg.style.display = 'flex';
+
+      // In a real app you'd POST to your backend here.
+      // e.g. fetch('/api/notify', { method: 'POST', body: JSON.stringify({ email }) });
+      console.log('Notify signup:', email);
+    });
+
+    /* ── Smooth nav link scroll ── */
+    document.querySelectorAll('a[href^="#"]').forEach(link => {
+      link.addEventListener('click', function (e) {
+        const target = document.querySelector(this.getAttribute('href'));
+        if (target) {
+          e.preventDefault();
+          target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      });
+    });
+
+    /* ── Intersection fade-in ── */
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.style.opacity = '1';
+          entry.target.style.transform = 'translateY(0)';
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.12 });
+
+    document.querySelectorAll('.feature-card, .legal-card, .coming-card').forEach(el => {
+      el.style.opacity = '0';
+      el.style.transform = 'translateY(18px)';
+      el.style.transition = 'opacity 0.45s ease, transform 0.45s ease';
+      observer.observe(el);
+    });
+  </script>
 
 </body>
 </html>
